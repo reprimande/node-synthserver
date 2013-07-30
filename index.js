@@ -16,7 +16,7 @@ var SinOsc = function(freq) {
 };
 SinOsc.prototype = {
   generate: function() {
-    var val = Math.sin(Math.PI * 2 * this.phase);
+    var val = Math.sin(Math.PI * 2 * this.phase) * 0.5;
     var step = (this.freq + (this.mod * this.depth)) / this.samplerate;
     this.phase += step;
     return val;
@@ -153,4 +153,4 @@ socket.on('connection', function(ws) {
 });
 
 server.listen(3000);
-console.log("Express server listening on port %d in %s mode", app.port, app.settings.env);
+console.log("start synth server.");

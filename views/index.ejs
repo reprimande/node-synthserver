@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  </head>
+  <body>
+    <style type="text/css" media="screen">
+      html {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.428571429;
+        color: #111111;
+      }
+      div#visualizer {
+        position:absolute;
+        width:100%;
+        height:100%;
+        top:0px;
+        left:0px;
+        z-index:-100;
+        margin: 0;
+      }
+      #scope-view {
+        //width:100%;
+        //height:100%;
+        top:0px;
+        left:0px;
+      }
+      div.controler {
+        font-weight:bold;
+        background-color: rgba(255, 128, 128, 0.7);
+        text-align: right;
+        width: 250px;
+        margin-left:auto;
+        margin-top:5px;
+        margin-bottom:5px;
+        padding:5px;
+        border-radius:5px;
+        box-shadow:3px 3px 0 rgba(255, 0, 0, 0.7);
+      }
+    </style>
+    <div id="visualizer">
+      <canvas id="scope-view"></canvas>
+    </div>
+
+    <div id="container">
+      <div class="controler">
+        freq : <input type="range" id="freq" value="1000" max="2000" min="0" step="1"><br/>
+        lfo / speed : <input type="range" id="lfo" value="0.5" max="200" min="0" step="1"><br/>
+        lfo / depth : <input type="range" id="depth" value="0" max="2000" min="0" step="1"><br/>
+      </div>
+      <div class="controler">
+          volume : <input type="range" id="volume" value="1" max="1" min="0" step="0.01"><br/>
+      </div>
+    </div>
+    <script type="text/javascript" src="/app.js"></script>
+  </body>
+</html>

@@ -11,6 +11,10 @@
     "express": "latest",
     "ejs": "latest"
   },
+  "engines": {
+    "node": "0.10.x",
+    "npm": "1.2.x"
+  },
   "repository": "",
   "author": "naoki nomoto",
   "license": "MIT"

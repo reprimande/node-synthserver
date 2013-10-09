@@ -79,7 +79,7 @@ SocketWriter.prototype._write = function(chunk, encoding, cb) {
   }
   setTimeout(function() {
     cb();
-  }, 2048 / 44100 * 1000 - 1);
+  }, 2048 / 44100 * 1000);
 };
 SocketWriter.prototype.add = function(ws) {
   this.sockets.push(ws);
@@ -152,5 +152,8 @@ socket.on('connection', function(ws) {
   });
 });
 
-server.listen(3000);
-console.log("start synth server.");
+var port = process.env.PORT || 5000;
+server.listen(port, function() {
+  console.log("Listening on " + port);
+});
+

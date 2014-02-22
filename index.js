@@ -6,7 +6,10 @@ var express = require('express'),
     stream = require('stream'),
     Readable = stream.Readable,
     Writable = stream.Writable,
+    Transform = stream.Transform,
     util = require('util');
+
+var BUFFER_LENGTH = 2048;
 
 var SinOsc = function(freq) {
   this.phase = 0;
@@ -14,58 +17,85 @@ var SinOsc = function(freq) {
   this.mod = 0;
   this.depth = 0;
   this.samplerate = 44100;
-};
-SinOsc.prototype = {
-  generate: function() {
-    var val = Math.sin(Math.PI * 2 * this.phase) * 0.5;
-    var step = (this.freq + (this.mod * this.depth)) / this.samplerate;
-    this.phase += step;
-    return val;
-  }
-};
-var sine = new SinOsc(1000);
-var lfo = new SinOsc(0.5);
-var SynthServer = function() {
-  var self = this;
   Readable.call(this);
-  setImmediate(function() {
-    self.loop();
-  });
 };
-util.inherits(SynthServer, Readable);
-SynthServer.prototype._read = function(n) {
+util.inherits(SinOsc, Readable);
+SinOsc.prototype._read = function(n) {
   var self = this;
   setImmediate(function() {
-    self.loop();
+    self.process();
   });
 };
-
-SynthServer.prototype.loop = function() {
+SinOsc.prototype.process = function() {
   var self = this,
-      bufLen = 2048,
-      input = new Float32Array(bufLen),
-      arrayBuffer = new ArrayBuffer(bufLen * 2 * 4),
-      view = new DataView(arrayBuffer),
-      offset = 0, i, j;
-
-  for (i = 0; i < bufLen; i++) {
-    sine.mod = lfo.generate();
-    var val = sine.generate();
-    input[i] = val;
-  }
-
-  for (i = 0; i < bufLen; i++) {
-    view.setFloat32(offset, input[i]);
+      view = new DataView(new ArrayBuffer(BUFFER_LENGTH * 4)),
+      offset = 0, i, val;
+  for (i = 0; i < BUFFER_LENGTH; i++) {
+    val = self.generate();
+    view.setFloat32(offset, val);
     offset += 4;
   }
 
-  if (this.push(new Buffer(new Uint8Array(view.buffer)))) {
+  var buffer = new Buffer(new Uint8Array(view.buffer));
+  if (this.push(buffer)) {
     setImmediate(function() {
-      //self.loop();
+      self.process();
     });
   }
 };
+SinOsc.prototype.generate = function() {
+  var val = Math.sin(Math.PI * 2 * this.phase);
+  var step = (this.freq + (this.mod * this.depth)) / this.samplerate;
+  this.phase += step;
+  return val;
+};
 
+var sine = new SinOsc(1000);
+var lfo = new SinOsc(0.5);
+
+/*
+ * SynthServer
+ */
+
+var SynthServer = function() {
+  var self = this;
+  //Readable.call(this);
+  Transform.call(this);
+  // setImmediate(function() {
+  //   self.process();
+  // });
+};
+util.inherits(SynthServer, Transform);
+
+SynthServer.prototype._transform = function(chunk, encoding, cb) {
+  var self = this;
+  this.push(self.process(chunk));
+  cb(null);
+};
+SynthServer.prototype._flush = function(output, cb) {
+  cb(null);
+};
+// SynthServer.prototype._read = function(n) {
+//   var self = this;
+//   setImmediate(function() {
+//     self.loop();
+//   });
+// };
+SynthServer.prototype.process = function(input) {
+  var self = this,
+      view = new DataView(new ArrayBuffer(BUFFER_LENGTH * 4)),
+      offset = 0, i;
+  for (i = 0; i < BUFFER_LENGTH; i++) {
+    var val = input.readFloatLE(i);
+    view.setFloat32(offset, val);
+    offset += 4;
+  }
+  return input;//new Buffer(new Uint8Array(view.buffer));
+};
+
+/*
+ * SocketWriter
+ */
 var SocketWriter = function(ws, opts) {
   var self = this;
   Writable.call(self, opts);
@@ -75,11 +105,11 @@ util.inherits(SocketWriter, Writable);
 SocketWriter.prototype._write = function(chunk, encoding, cb) {
   var self = this;
   this.sockets.forEach(function(s) {
-    //s.send(chunk, {binary: true, mask: false});
+    s.send(chunk, {binary: true, mask: false});
   });
   setTimeout(function() {
     cb();
-  }, 2048 / 44100 * 1000);
+  }, BUFFER_LENGTH / 44100 * 1000);
 };
 SocketWriter.prototype.add = function(ws) {
   this.sockets.push(ws);
@@ -124,7 +154,7 @@ var server = http.createServer(app);
 var socket = new WebSocketServer({server:server, path:'/socket'});
 
 var writer = new SocketWriter();
-synth.pipe(writer);
+sine.pipe(synth).pipe(writer);
 
 socket.on('connection', function(ws) {
   console.log('connect!!');

@@ -60,9 +60,8 @@ SynthServer.prototype.loop = function() {
   }
 
   if (this.push(new Buffer(new Uint8Array(view.buffer)))) {
-  //if (this.push(buf)) {
     setImmediate(function() {
-      self.loop();
+      //self.loop();
     });
   }
 };
@@ -76,7 +75,7 @@ util.inherits(SocketWriter, Writable);
 SocketWriter.prototype._write = function(chunk, encoding, cb) {
   var self = this;
   this.sockets.forEach(function(s) {
-    s.send(chunk, {binary: true, mask: false});
+    //s.send(chunk, {binary: true, mask: false});
   });
   setTimeout(function() {
     cb();

@@ -2,6 +2,7 @@ var express = require('express'),
     http = require('http'),
     app = express(),
     WebSocketServer = require('ws').Server,
+    WebSocket = require('ws').WebSocket,
     sio = require("socket.io").listen(5001),
     stream = require('stream'),
     Readable = stream.Readable,
@@ -9,19 +10,28 @@ var express = require('express'),
     Transform = stream.Transform,
     util = require('util');
 
-var BUFFER_LENGTH = 256;
+var BUFFER_LENGTH = 256,
+    SAMPLE_RATE = 44100;
 
 var CVIn = function() {
-  this.values = new Buffer(new Uint8Array(BUFFER_LENGTH * 4));
+  this.values = [];
   Writable.call(this);
 };
 util.inherits(CVIn, Writable);
 CVIn.prototype._write = function(chunk, encoding, cb) {
   var self = this;
-  this.values = chunk;
+  this.values.push(chunk);
+  var next = (new Date()).getTime() + BUFFER_LENGTH / SAMPLE_RATE * 1000,
+      t;
   setTimeout(function() {
     cb();
-  }, BUFFER_LENGTH / 44100 * 1000);
+  }, BUFFER_LENGTH / SAMPLE_RATE * 1000);
+};
+CVIn.prototype.getChunk = function() {
+  if (this.values.length > 0) {
+    return this.values.shift();
+  }
+  return null;
 };
 
 var SinOsc = function(freq) {
@@ -30,7 +40,7 @@ var SinOsc = function(freq) {
   this.mod = 0;
   this.depth = 0;
   this.cvin = new CVIn();
-  this.samplerate = 44100;
+  this.samplerate = SAMPLE_RATE;
   Readable.call(this);
 };
 util.inherits(SinOsc, Readable);
@@ -43,11 +53,17 @@ SinOsc.prototype._read = function(n) {
 SinOsc.prototype.process = function() {
   var self = this,
       view = new DataView(new ArrayBuffer(BUFFER_LENGTH * 4)),
-      cvView = new DataView(new Uint8Array(this.cvin.values).buffer),
-      offset = 0, i, cvval, val;
+      cvView,
+      cvChunk = this.cvin.getChunk(),
+      offset = 0, i, cvval = 0, val;
 
+  if (cvChunk) {
+    cvView = new DataView(new Uint8Array(cvChunk).buffer);
+  }
   for (i = 0; i < BUFFER_LENGTH; i++) {
-    cvval = cvView.getFloat32(offset);
+    if (cvView) {
+      cvval = cvView.getFloat32(offset);
+    }
     val = self.generate(cvval);
     view.setFloat32(offset, val);
     offset += 4;
@@ -85,11 +101,17 @@ VCA.prototype.process = function(input) {
   var self = this,
       srcView = new DataView(new Uint8Array(input).buffer),
       dstView = new DataView(new ArrayBuffer(BUFFER_LENGTH * 4)),
-      cvView = new DataView(new Uint8Array(this.cvin.values).buffer),
-      offset = 0, cvval;
+      cvView,
+      cvChunk = this.cvin.getChunk(),
+      offset = 0, cvval = 0;
 
+  if (cvChunk) {
+    cvView = new DataView(new Uint8Array(cvChunk).buffer);
+  }
   for (var i = 0; i < BUFFER_LENGTH; i++) {
-    cvval = cvView.getFloat32(offset);
+    if (cvView) {
+      cvval = cvView.getFloat32(offset);
+    }
     dstView.setFloat32(offset, srcView.getFloat32(offset) * self.gain * cvval);
     offset += 4;
   }
@@ -98,7 +120,7 @@ VCA.prototype.process = function(input) {
 
 
 var Envelope = function(a, d, s, st, r) {
-  this.samplerate = 44100;
+  this.samplerate = SAMPLE_RATE;
   this.attack = a;
   this.decay = d;
   this.sustain = s;
@@ -219,11 +241,18 @@ util.inherits(SocketWriter, Writable);
 SocketWriter.prototype._write = function(chunk, encoding, cb) {
   var self = this;
   this.sockets.forEach(function(s) {
-    s.send(chunk, {binary: true, mask: false});
+    if (s.readyState === 1) {
+      s.send(chunk, {binary: true, mask: false});
+    }
   });
-  setTimeout(function() {
-    cb();
-  }, BUFFER_LENGTH / 44100 * 1000);
+  var next = (new Date()).getTime() + BUFFER_LENGTH / SAMPLE_RATE * 1000,
+      t;
+  t = setInterval(function() {
+    if (next < (new Date()).getTime()) {
+      clearInterval(t);
+      cb();
+    }
+  }, 1);
 };
 SocketWriter.prototype.add = function(ws) {
   this.sockets.push(ws);

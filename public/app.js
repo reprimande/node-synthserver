@@ -1,95 +1,86 @@
 (function() {
-  var ws = (function() {
-    var host = window.location.href.replace(/(http|https)(:\/\/.*?)\/.*/, 'ws$2'),
-        t, socket;
-    var connect = function() {
-      socket = new WebSocket(host + '/socket');
-      //WS Setup
-      socket.onopen = function() {
-        console.log('onopen');
-        if (t) clearInterval(t);
-        socket.binaryType = 'arraybuffer';
-      };
-      socket.onerror = function() {
-        console.log('connection error.');
-      };
-      socket.onclose = function() {
-        console.log('connection close.');
-        t = setInterval(function() {
-          //connect();
-        }, 500);
-      };
-      socket.onmessage = function(message) {
-        var data = message.data,
-            json;
-        if ($.type(data) === "string") {
-          json = JSON.parse(data);
-          if (json.message === "freq") {
-            $('#freq')[0].value = json.value;
-          } else if (json.message === "lfo") {
-            $('#lfo')[0].value = json.value;
-          } else if (json.message === "depth") {
-            $('#depth')[0].value = json.value;
-          } else if (json.message === "attack") {
-            $('#attack')[0].value = json.value;
-          } else if (json.message === "decay") {
-            $('#decay')[0].value = json.value;
-          } else if (json.message === "sustain") {
-            $('#sustain')[0].value = json.value;
-          } else if (json.message === "sustainTime") {
-            $('#sustainTime')[0].value = json.value;
-          } else if (json.message === "release") {
-            $('#release')[0].value = json.value;
-          } else if (json.message === "seqonoff") {
-            $('#seqonoff')[0].checked = json.value;
-          } else if (json.message === "bpm") {
-            $('#bpm')[0].value = json.value;
-          } else if (json.message === "seq") {
-            $("*[name=gate]")[json.gate.index].checked = json.gate.value;
-          } else if (json.message === "step") {
-            // $("#seq span").each(function(i, s) {
-            //   s.className = "step";
-            // });
-            // $("#seq span")[json.value].className = "step-current";
+  var host = window.location.href.replace(/(http|https)(:\/\/.*?)\/.*/, 'ws$2'),
+      t, ws;
+  ws = new WebSocket(host + '/socket');
+  //WS Setup
+  ws.onopen = function() {
+    console.log('onopen');
+    //if (t) clearInterval(t);
+    ws.binaryType = 'arraybuffer';
+  };
+  ws.onerror = function() {
+    console.log('connection error.');
+  };
+  ws.onclose = function() {
+    console.log('connection close.');
+    // t = setInterval(function() {
+    //   //connect();
+    // }, 500);
+  };
+  ws.onmessage = function(message) {
+    var data = message.data,
+        json;
+    if ($.type(data) === "string") {
+      json = JSON.parse(data);
+      if (json.message === "freq") {
+        $('#freq')[0].value = json.value;
+      } else if (json.message === "lfo") {
+        $('#lfo')[0].value = json.value;
+      } else if (json.message === "depth") {
+        $('#depth')[0].value = json.value;
+      } else if (json.message === "attack") {
+        $('#attack')[0].value = json.value;
+      } else if (json.message === "decay") {
+        $('#decay')[0].value = json.value;
+      } else if (json.message === "sustain") {
+        $('#sustain')[0].value = json.value;
+      } else if (json.message === "sustainTime") {
+        $('#sustainTime')[0].value = json.value;
+      } else if (json.message === "release") {
+        $('#release')[0].value = json.value;
+      } else if (json.message === "seqonoff") {
+        $('#seqonoff')[0].checked = json.value;
+      } else if (json.message === "bpm") {
+        $('#bpm')[0].value = json.value;
+      } else if (json.message === "seq") {
+        $("*[name=gate]")[json.gate.index].checked = json.gate.value;
+      } else if (json.message === "step") {
+        // $("#seq span").each(function(i, s) {
+        //   s.className = "step";
+        // });
+        // $("#seq span")[json.value].className = "step-current";
 
 
-          } else if (json.message === "trigger") {
-            $('#freq')[0].value = json.value;
+      } else if (json.message === "trigger") {
+        $('#freq')[0].value = json.value;
 
-          } else if (json.message === "init") {
-            $('#freq')[0].value = json.data.freq;
-            $('#lfo')[0].value = json.data.lfo;
-            $('#depth')[0].value = json.data.depth;
+      } else if (json.message === "init") {
+        $('#freq')[0].value = json.data.freq;
+        $('#lfo')[0].value = json.data.lfo;
+        $('#depth')[0].value = json.data.depth;
 
-            $('#attack')[0].value = json.data.attack;
-            $('#decay')[0].value = json.data.decay;
-            $('#sustain')[0].value = json.data.sustain;
-            $('#sustainTime')[0].value = json.data.sustainTime;
-            $('#release')[0].value = json.data.release;
+        $('#attack')[0].value = json.data.attack;
+        $('#decay')[0].value = json.data.decay;
+        $('#sustain')[0].value = json.data.sustain;
+        $('#sustainTime')[0].value = json.data.sustainTime;
+        $('#release')[0].value = json.data.release;
 
-            console.log(json.data.seqonoff);
-            $('#seqonoff')[0].checked = json.data.seqonoff ? "on" : "";
-            $('#bpm')[0].value = json.data.bpm;
+        console.log(json.data.seqonoff);
+        $('#seqonoff')[0].checked = json.data.seqonoff ? "on" : "";
+        $('#bpm')[0].value = json.data.bpm;
 
-            $("*[name=gate]").each(function(i, c) {
-              c.checked = json.data.gate[i];
-            });
-          }
-        } else {
-          listener.setAudioBuffer(data);
-        }
-      };
-    };
-    connect();
-    return {
-      send: function(arg) {
-        socket.send(arg);
+        $("*[name=gate]").each(function(i, c) {
+          c.checked = json.data.gate[i];
+        });
       }
-    };
-  })();
+    } else {
+      listener.setAudioBuffer(data);
+    }
+  };
 
   var BUFFER_LENGTH = 256,
       ctx = new webkitAudioContext();
+  ctx.sampleRate = 44100;
 
   var AudioListener = function(ctx, bufferLength) {
     var self = this;
@@ -142,8 +133,8 @@
     this.isAnalyze = false;
     this.animation = function(fn) {
       var requestAnimationFrame = window.requestAnimationFrame ||
-        window.webkitRequestAnimationFrame ||
-        window.mozRequestAnimationFrame;
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame;
       requestAnimationFrame(fn);
     };
     var self = this;
@@ -181,7 +172,7 @@
       ctx.moveTo(0, -999);
       for (var i = 0; i < data.length; i++) {
         value = data[i] - 128 + canvas.height / 2;
-            ctx.lineTo(i, value);
+        ctx.lineTo(i, value);
       }
       ctx.moveTo(0, 999);
       ctx.closePath();
@@ -266,6 +257,10 @@
   var key2midi = {
     65: 0, 87: 1, 83: 2, 69: 3,  68: 4, 70: 5, 84: 6,
     71: 7, 89: 8, 72: 9, 85: 10, 74: 11 };
+
+  var keystep = [
+    192, 49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 189, 187, 219, 221, 220
+  ];
   var octave = 6;
   $(window).keydown(function(e) {
     var midinote = key2midi[e.keyCode];
@@ -274,6 +269,15 @@
     console.log(freq);
     ws.send(JSON.stringify({ message: "trigger", value: freq }));
     $('#freq')[0].value = freq;
+  });
+
+  $(window).keydown(function(e) {
+    keystep.forEach(function(val, i) {
+      if (e.keyCode === val) {
+        $("*[name=gate]")[i].checked = ($("*[name=gate]")[i].checked) ? false : true;
+        ws.send(JSON.stringify({ message: "seq", gate: {index: i, value: $("*[name=gate]")[i].checked}}));
+      }
+    });
   });
 
   $(window).resize(function(){

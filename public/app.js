@@ -44,7 +44,7 @@
     };
   })();
 
-  var BUFFER_LENGTH = 2048,
+  var BUFFER_LENGTH = 512,
       ctx = new webkitAudioContext();
 
   var AudioListener = function(ctx, bufferLength) {
@@ -187,6 +187,34 @@
   $('#depth').bind('change', function(e){
     ws.send(JSON.stringify({ message: "depth", value: this.valueAsNumber }));
   });
+
+  $('#attack').bind('change', function(e){
+    ws.send(JSON.stringify({ message: "attack", value: this.valueAsNumber }));
+  });
+  $('#decay').bind('change', function(e){
+    ws.send(JSON.stringify({ message: "decay", value: this.valueAsNumber }));
+  });
+  $('#sustain').bind('change', function(e){
+    ws.send(JSON.stringify({ message: "sustain", value: this.valueAsNumber }));
+  });
+  $('#sustainTime').bind('change', function(e){
+    ws.send(JSON.stringify({ message: "sustainTime", value: this.valueAsNumber }));
+  });
+  $('#release').bind('change', function(e){
+    ws.send(JSON.stringify({ message: "release", value: this.valueAsNumber }));
+  });
+
+  $("*[name=gate]").bind('change', function(e) {
+    console.log(this.checked, this.value);
+    ws.send(JSON.stringify({ message: "seq", gate: {index: this.value, value: this.checked}}));
+  });
+  $("#seqonoff").bind('change', function(e) {
+    ws.send(JSON.stringify({ message: "seqonoff", value: this.checked}));
+  });
+  $('#bpm').bind('change', function(e){
+    ws.send(JSON.stringify({ message: "bpm", value: this.valueAsNumber }));
+  });
+
   $('#volume').bind('change', function(e){
     volumeNode.gain.value = this.valueAsNumber;
   });

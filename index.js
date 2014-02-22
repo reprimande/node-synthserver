@@ -9,11 +9,10 @@ var express = require('express'),
     Transform = stream.Transform,
     util = require('util');
 
-var BUFFER_LENGTH = 2048;
+var BUFFER_LENGTH = 512;
 
 var CVIn = function() {
   this.values = new Buffer(new Uint8Array(BUFFER_LENGTH * 4));
-  console.log(this.values);
   Writable.call(this);
 };
 util.inherits(CVIn, Writable);
@@ -49,7 +48,6 @@ SinOsc.prototype.process = function() {
 
   for (i = 0; i < BUFFER_LENGTH; i++) {
     cvval = cvView.getFloat32(offset);
-//    console.log(cvval);
     val = self.generate(cvval);
     view.setFloat32(offset, val);
     offset += 4;
@@ -122,7 +120,6 @@ Envelope.prototype._read = function(n) {
   });
 };
 Envelope.prototype.trigger = function() {
-  console.log("trigger!!!");
   this.state = "attack";
 };
 Envelope.prototype.process = function() {
@@ -246,17 +243,67 @@ SocketWriter.prototype.sendMessage = function(json, src) {
   });
 };
 
+var Sequencer = function(cb) {
+  var self = this;
+  this.maxStep = 16;
+  this.gate = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  this.freq = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  this.step = 0;
+  this.bpm = 120;
+  this.prevTime = (new Date).getTime();
+  this.running = false;
+  this.callback = cb;
+  this.timer = setInterval(function() {
+    self.process();
+  }, 1);
+};
+Sequencer.prototype.start = function() {
+  this.step = 0;
+  this.running = true;
+};
+Sequencer.prototype.stop = function() {
+  this.step = 0;
+  this.running = false;
+};
+Sequencer.prototype.resume = function() {
+  this.running = true;
+};
+Sequencer.prototype.suspend = function() {
+  this.running = false;
+};
+Sequencer.prototype.reset = function() {
+  this.step = 0;
+};
+Sequencer.prototype.process = function() {
+  var current, ms;
+  if (!this.running) return;
+  current = (new Date()).getTime();
+  ms = (60 * 100) / this.bpm;
+
+  if (this.prevTime + ms < current) {
+    this.step = (this.step < this.maxStep - 1) ? this.step + 1 : 0;
+    if (this.callback) this.callback.apply(this, [this.gate[this.step], this.freq[this.step]]);
+    this.prevTime = current;
+  }
+};
 
 var vco = new SinOsc(1000),
     lfo = new SinOsc(0.5),
     vca = new VCA(1),
-    env = new Envelope(5, 200, 0.7, 100, 100),
+    env = new Envelope(10, 10, 0.9, 100, 50),
     synth = new SynthServer(),
+    seq = new Sequencer(function(gate, freq) {
+      if (gate === 1) {
+        env.trigger();
+      }
+    }),
     writer = new SocketWriter();
 
 lfo.pipe(vco.cvin);
 env.pipe(vca.cvin);
 vco.pipe(vca).pipe(synth).pipe(writer);
+
+seq.start();
 
 var server = http.createServer(app),
     socket = new WebSocketServer({server:server, path:'/socket'});
@@ -295,6 +342,17 @@ socket.on('connection', function(ws) {
       } else if (message === 'trigger') {
         vco.freq = data.value;
         env.trigger();
+      } else if (message === 'seq') {
+        seq.gate[data.gate.index] = data.gate.value ? 1 : 0;
+        console.log(seq.gate);
+      } else if (message === 'seqonoff') {
+        if (data.value) {
+          seq.start();
+        } else {
+          seq.stop();
+        }
+      } else if (message === 'bpm') {
+        seq.bpm = data.value;
       }
       writer.sendMessage(data, ws);
     }

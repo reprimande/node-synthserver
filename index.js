@@ -311,9 +311,25 @@ socket.on('connection', function(ws) {
   console.log('connect!!');
   writer.add(ws);
 
-  ws.send(JSON.stringify({message: "freq", value: vco.freq}));
-  ws.send(JSON.stringify({message: "lfo", value: lfo.freq}));
-  ws.send(JSON.stringify({message: "depth", value: vco.depth}));
+  // ws.send(JSON.stringify({message: "freq", value: vco.freq}));
+  // ws.send(JSON.stringify({message: "lfo", value: lfo.freq}));
+  // ws.send(JSON.stringify({message: "depth", value: vco.depth}));
+
+  ws.send(JSON.stringify(
+    {message: "init", data: {
+      "freq": vco.freq,
+      "lfo": lfo.freq,
+      "depth": vco.depth,
+      "attack": env.attack,
+      "decay": env.decay,
+      "sustain": env.sustain,
+      "sustainTime": env.sustainTime,
+      "release": env.release,
+      "seqonoff": seq.running,
+      "bpm": seq.bpm,
+      "gate": seq.gate
+    }}
+  ));
   ws.on('message', function(req, flags) {
     if (!flags.binary) {
       var data = JSON.parse(req),

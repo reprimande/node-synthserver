@@ -16,7 +16,7 @@
       socket.onclose = function() {
         console.log('connection close.');
         t = setInterval(function() {
-          connect();
+          //connect();
         }, 500);
       };
       socket.onmessage = function(message) {
@@ -30,6 +30,42 @@
             $('#lfo')[0].value = json.value;
           } else if (json.message === "depth") {
             $('#depth')[0].value = json.value;
+          } else if (json.message === "attack") {
+            $('#attack')[0].value = json.value;
+          } else if (json.message === "decay") {
+            $('#decay')[0].value = json.value;
+          } else if (json.message === "sustain") {
+            $('#sustain')[0].value = json.value;
+          } else if (json.message === "sustainTime") {
+            $('#sustainTime')[0].value = json.value;
+          } else if (json.message === "release") {
+            $('#release')[0].value = json.value;
+          } else if (json.message === "seqonoff") {
+            $('#seqonoff')[0].checked = json.value;
+          } else if (json.message === "bpm") {
+            $('#bpm')[0].value = json.value;
+
+          } else if (json.message === "seq") {
+            $("*[name=gate]")[json.gate.index].checked = json.gate.value;
+
+          } else if (json.message === "init") {
+            $('#freq')[0].value = json.data.freq;
+            $('#lfo')[0].value = json.data.lfo;
+            $('#depth')[0].value = json.data.depth;
+
+            $('#attack')[0].value = json.data.attack;
+            $('#decay')[0].value = json.data.decay;
+            $('#sustain')[0].value = json.data.sustain;
+            $('#sustainTime')[0].value = json.data.sustainTime;
+            $('#release')[0].value = json.data.release;
+
+            console.log(json.data.seqonoff);
+            $('#seqonoff')[0].checked = json.data.seqonoff ? "on" : "";
+            $('#bpm')[0].value = json.data.bpm;
+
+            $("*[name=gate]").each(function(i, c) {
+              c.checked = json.data.gate[i];
+            });
           }
         } else {
           listener.setAudioBuffer(data);

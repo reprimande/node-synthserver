@@ -44,9 +44,11 @@
             $('#seqonoff')[0].checked = json.value;
           } else if (json.message === "bpm") {
             $('#bpm')[0].value = json.value;
-
           } else if (json.message === "seq") {
             $("*[name=gate]")[json.gate.index].checked = json.gate.value;
+
+          } else if (json.message === "trigger") {
+            $('#freq')[0].value = json.value;
 
           } else if (json.message === "init") {
             $('#freq')[0].value = json.data.freq;
@@ -265,6 +267,7 @@
     var freq = 440.0 * Math.pow(2.0, (midinote + (octave * 12) - 69.0) / 12.0);
     console.log(freq);
     ws.send(JSON.stringify({ message: "trigger", value: freq }));
+    $('#freq')[0].value = freq;
   });
 
   $(window).resize(function(){

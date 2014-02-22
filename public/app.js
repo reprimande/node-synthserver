@@ -191,6 +191,18 @@
     volumeNode.gain.value = this.valueAsNumber;
   });
 
+  var key2midi = {
+    65: 0, 87: 1, 83: 2, 69: 3,  68: 4, 70: 5, 84: 6,
+    71: 7, 89: 8, 72: 9, 85: 10, 74: 11 };
+  var octave = 6;
+  $(window).keydown(function(e) {
+    var midinote = key2midi[e.keyCode];
+    if (midinote === (void 0)) return;
+    var freq = 440.0 * Math.pow(2.0, (midinote + (octave * 12) - 69.0) / 12.0);
+    console.log(freq);
+    ws.send(JSON.stringify({ message: "trigger", value: freq }));
+  });
+
   $(window).resize(function(){
     visualizer.resize();
   });

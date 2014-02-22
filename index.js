@@ -91,7 +91,7 @@ VCA.prototype.process = function(input) {
       offset = 0, cvval;
 
   for (var i = 0; i < BUFFER_LENGTH; i++) {
-    cvval = 1;//cvView.getFloat32(offset);
+    cvval = cvView.getFloat32(offset);
     dstView.setFloat32(offset, srcView.getFloat32(offset) * self.gain * cvval);
     offset += 4;
   }
@@ -250,18 +250,13 @@ SocketWriter.prototype.sendMessage = function(json, src) {
 var vco = new SinOsc(1000),
     lfo = new SinOsc(0.5),
     vca = new VCA(1),
-    env = new Envelope(200, 200, 0.2, 1000, 500),
+    env = new Envelope(5, 200, 0.7, 100, 100),
     synth = new SynthServer(),
     writer = new SocketWriter();
 
 lfo.pipe(vco.cvin);
 env.pipe(vca.cvin);
 vco.pipe(vca).pipe(synth).pipe(writer);
-
-
-setInterval(function() {
-  env.trigger();
-}, 3000);
 
 var server = http.createServer(app),
     socket = new WebSocketServer({server:server, path:'/socket'});
@@ -287,6 +282,19 @@ socket.on('connection', function(ws) {
       } else if (message === 'depth') {
         var depth = data.value;
         vco.depth = depth;
+      } else if (message === 'attack') {
+        env.attack = data.value;
+      } else if (message === 'decay') {
+        env.decay = data.value;
+      } else if (message === 'sustain') {
+        env.sustain = data.value;
+      } else if (message === 'sustainTime') {
+        env.sustainTime = data.value;
+      } else if (message === 'release') {
+        env.release = data.value;
+      } else if (message === 'trigger') {
+        vco.freq = data.value;
+        env.trigger();
       }
       writer.sendMessage(data, ws);
     }

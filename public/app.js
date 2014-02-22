@@ -46,6 +46,12 @@
             $('#bpm')[0].value = json.value;
           } else if (json.message === "seq") {
             $("*[name=gate]")[json.gate.index].checked = json.gate.value;
+          } else if (json.message === "step") {
+            // $("#seq span").each(function(i, s) {
+            //   s.className = "step";
+            // });
+            // $("#seq span")[json.value].className = "step-current";
+
 
           } else if (json.message === "trigger") {
             $('#freq')[0].value = json.value;
@@ -82,7 +88,7 @@
     };
   })();
 
-  var BUFFER_LENGTH = 512,
+  var BUFFER_LENGTH = 256,
       ctx = new webkitAudioContext();
 
   var AudioListener = function(ctx, bufferLength) {

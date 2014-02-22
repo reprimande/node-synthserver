@@ -41,6 +41,15 @@
       div.seq {
         width: 400px;
       }
+      div.seq span.step {
+        width: 40px;
+        height: 40px;
+      }
+      div.seq span.step-current {
+        width: 40px;
+        height: 40px;
+        background-color: yellow;
+      }
     </style>
     <div id="visualizer">
       <canvas id="scope-view"></canvas>
@@ -59,28 +68,59 @@
         env / release : <input type="range" id="release" value="0" max="100" min="1" step="1"><br/>
 
       </div>
-      <div class="controler seq">
+      <div id="seq" class="controler seq">
         seq <input type="checkbox" id="seqonoff" name="seqonoff" value="0">
         <input type="range" id="bpm" value="120" max="200" min="0" step="1">
         <br/>
-        <input type="checkbox" name="gate" value="0">
-        <input type="checkbox" name="gate" value="1">
-        <input type="checkbox" name="gate" value="2">
-        <input type="checkbox" name="gate" value="3">
-        <input type="checkbox" name="gate" value="4">
-        <input type="checkbox" name="gate" value="5">
-        <input type="checkbox" name="gate" value="6">
-        <input type="checkbox" name="gate" value="7">
-        <input type="checkbox" name="gate" value="8">
-        <input type="checkbox" name="gate" value="9">
-        <input type="checkbox" name="gate" value="10">
-        <input type="checkbox" name="gate" value="11">
-        <input type="checkbox" name="gate" value="12">
-        <input type="checkbox" name="gate" value="13">
-        <input type="checkbox" name="gate" value="14">
-        <input type="checkbox" name="gate" value="15">
+        <span id="step-1" class="step">
+          <input type="checkbox" name="gate" value="0">
+        </span>
+        <span id="step-2" class="step">
+          <input type="checkbox" name="gate" value="1">
+        </span>
+        <span id="step-3" class="step">
+          <input type="checkbox" name="gate" value="2">
+        </span>
+        <span id="step-4" class="step">
+          <input type="checkbox" name="gate" value="3">
+        </span>
+        <span id="step-5" class="step">
+          <input type="checkbox" name="gate" value="4">
+        </span>
+        <span id="step-6" class="step">
+          <input type="checkbox" name="gate" value="5">
+        </span>
+        <span id="step-7" class="step">
+          <input type="checkbox" name="gate" value="6">
+        </span>
+        <span id="step-8" class="step">
+          <input type="checkbox" name="gate" value="7">
+        </span>
+        <span id="step-9" class="step">
+          <input type="checkbox" name="gate" value="8">
+        </span>
+        <span id="step-10" class="step">
+          <input type="checkbox" name="gate" value="9">
+        </span>
+        <span id="step-11" class="step">
+          <input type="checkbox" name="gate" value="10">
+        </span>
+        <span id="step-12" class="step">
+          <input type="checkbox" name="gate" value="11">
+        </span>
+        <span id="step-13" class="step">
+          <input type="checkbox" name="gate" value="12">
+        </span>
+        <span id="step-14" class="step">
+          <input type="checkbox" name="gate" value="13">
+        </span>
+        <span id="step-15" class="step">
+          <input type="checkbox" name="gate" value="14">
+        </span>
+        <span id="step-16" class="step">
+          <input type="checkbox" name="gate" value="15">
+        </span>
       </div>
-
       <div class="controler">
         volume(browser only) : <input type="range" id="volume" value="1" max="1" min="0" step="0.01"><br/>
       </div>

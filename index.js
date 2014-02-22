@@ -9,7 +9,7 @@ var express = require('express'),
     Transform = stream.Transform,
     util = require('util');
 
-var BUFFER_LENGTH = 512;
+var BUFFER_LENGTH = 256;
 
 var CVIn = function() {
   this.values = new Buffer(new Uint8Array(BUFFER_LENGTH * 4));
@@ -282,7 +282,7 @@ Sequencer.prototype.process = function() {
 
   if (this.prevTime + ms < current) {
     this.step = (this.step < this.maxStep - 1) ? this.step + 1 : 0;
-    if (this.callback) this.callback.apply(this, [this.gate[this.step], this.freq[this.step]]);
+    if (this.callback) this.callback.apply(this, [this.step, this.gate[this.step], this.freq[this.step]]);
     this.prevTime = current;
   }
 };
@@ -292,10 +292,11 @@ var vco = new SinOsc(1000),
     vca = new VCA(1),
     env = new Envelope(10, 10, 0.9, 100, 50),
     synth = new SynthServer(),
-    seq = new Sequencer(function(gate, freq) {
+    seq = new Sequencer(function(step, gate, freq) {
       if (gate === 1) {
         env.trigger();
       }
+      writer.sendMessage({message: "step", value: step});
     }),
     writer = new SocketWriter();
 

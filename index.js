@@ -44,18 +44,23 @@ SynthServer.prototype.loop = function() {
   var self = this,
       bufLen = 2048,
       input = new Float32Array(bufLen),
-      buf = new Buffer(bufLen * 2 * 4),
+      arrayBuffer = new ArrayBuffer(bufLen * 2 * 4),
+      view = new DataView(arrayBuffer),
       offset = 0, i, j;
 
   for (i = 0; i < bufLen; i++) {
     sine.mod = lfo.generate();
     var val = sine.generate();
-    buf.writeInt16LE((val * 32760) | 0, offset);
-    offset += 2;
+    input[i] = val;
   }
 
-  //if (this.push(new Buffer(new Uint8Array(view.buffer)))) {
-  if (this.push(buf)) {
+  for (i = 0; i < bufLen; i++) {
+    view.setFloat32(offset, input[i]);
+    offset += 4;
+  }
+
+  if (this.push(new Buffer(new Uint8Array(view.buffer)))) {
+  //if (this.push(buf)) {
     setImmediate(function() {
       self.loop();
     });

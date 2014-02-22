@@ -25,22 +25,17 @@
   AudioListener.prototype = {
     setAudioBuffer: function(buffer) {
       var view = new DataView(buffer),
-          converter = new DataView(new ArrayBuffer(2)),
-          result = new DataView(new ArrayBuffer(this.bufferLength * 2)),
-          streamBuffer = new Array(this.chNum);
-
-      streamBuffer[0] = new Float32Array(this.bufferLength);
-      streamBuffer[1] = new Float32Array(this.bufferLength);
-      for (var i = 0, offset = 0, int16, float32; i < this.bufferLength; i++) {
-//        for (var j = 0; j < this.chNum; j++) {
-        int16 = view.getInt16(offset, true);//view.getFloat32(offset);
-        float32 = (int16 + 0.5) / (0x7FFF + 0.5);
-        streamBuffer[0][i] = float32;
-        streamBuffer[1][i] = float32;
-        offset += 2;
-//        }
+          result = new Array(this.chNum),
+          offset = 0, i, val;
+      result[0] = new Float32Array(this.bufferLength);
+      result[1] = new Float32Array(this.bufferLength);
+      for (i = 0; i < this.bufferLength; i++) {
+        val = view.getFloat32(offset);
+        result[0][i] = val;
+        result[1][i] = view.getFloat32(offset);
+        offset += 4;
       }
-      this.listenBuffers.push(streamBuffer);
+      this.listenBuffers.push(result);
     },
     connect: function(node) {
       this.processNode.connect(node);

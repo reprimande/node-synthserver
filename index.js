@@ -21,8 +21,6 @@ util.inherits(CVIn, Writable);
 CVIn.prototype._write = function(chunk, encoding, cb) {
   var self = this;
   this.values.push(chunk);
-  var next = (new Date()).getTime() + BUFFER_LENGTH / SAMPLE_RATE * 1000,
-      t;
   setTimeout(function() {
     cb();
   }, BUFFER_LENGTH / SAMPLE_RATE * 1000);
@@ -143,6 +141,7 @@ Envelope.prototype._read = function(n) {
 };
 Envelope.prototype.trigger = function() {
   this.state = "attack";
+  this.value = 0;
 };
 Envelope.prototype.process = function() {
   var self = this,
@@ -236,23 +235,21 @@ var SocketWriter = function() {
   var self = this;
   Writable.call(self);
   self.sockets = [];
+  self.chunks = [];
 };
 util.inherits(SocketWriter, Writable);
 SocketWriter.prototype._write = function(chunk, encoding, cb) {
   var self = this;
-  this.sockets.forEach(function(s) {
-    if (s.readyState === 1) {
-      s.send(chunk, {binary: true, mask: false});
-    }
-  });
-  var next = (new Date()).getTime() + BUFFER_LENGTH / SAMPLE_RATE * 1000,
-      t;
-  t = setInterval(function() {
-    if (next < (new Date()).getTime()) {
-      clearInterval(t);
-      cb();
-    }
-  }, 1);
+  this.chunks.push(chunk);
+  setTimeout(function() {
+    var c = self.chunks.shift();
+    self.sockets.forEach(function(s) {
+      if (s.readyState === 1) {
+        s.send(c, {binary: true, mask: false});
+      }
+    });
+    cb();
+  }, BUFFER_LENGTH / SAMPLE_RATE * 1000);
 };
 SocketWriter.prototype.add = function(ws) {
   this.sockets.push(ws);

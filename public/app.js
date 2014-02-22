@@ -1,7 +1,50 @@
 (function() {
-  var host = window.location.href.replace(/(http|https)(:\/\/.*?)\/.*/, 'ws$2'),
-      socket = new WebSocket(host + '/socket'),
-      BUFFER_LENGTH = 2048,
+  var ws = (function() {
+    var host = window.location.href.replace(/(http|https)(:\/\/.*?)\/.*/, 'ws$2'),
+        t, socket;
+    var connect = function() {
+      socket = new WebSocket(host + '/socket');
+      //WS Setup
+      socket.onopen = function() {
+        console.log('onopen');
+        if (t) clearInterval(t);
+        socket.binaryType = 'arraybuffer';
+      };
+      socket.onerror = function() {
+        console.log('connection error.');
+      };
+      socket.onclose = function() {
+        console.log('connection close.');
+        t = setInterval(function() {
+          connect();
+        }, 500);
+      };
+      socket.onmessage = function(message) {
+        var data = message.data,
+            json;
+        if ($.type(data) === "string") {
+          json = JSON.parse(data);
+          if (json.message === "freq") {
+            $('#freq')[0].value = json.value;
+          } else if (json.message === "lfo") {
+            $('#lfo')[0].value = json.value;
+          } else if (json.message === "depth") {
+            $('#depth')[0].value = json.value;
+          }
+        } else {
+          listener.setAudioBuffer(data);
+        }
+      };
+    };
+    connect();
+    return {
+      send: function(arg) {
+        socket.send(arg);
+      }
+    };
+  })();
+
+  var BUFFER_LENGTH = 2048,
       ctx = new webkitAudioContext();
 
   var AudioListener = function(ctx, bufferLength) {
@@ -134,43 +177,15 @@
   visualizer.connect(ctx.destination);
   visualizer.start();
 
-  //WS Setup
-  socket.onopen = function() {
-    console.log('onopen');
-    socket.binaryType = 'arraybuffer';
-  };
-  socket.onerror = function() {
-    console.log('connection error.');
-  };
-  socket.onclose = function() {
-    console.log('connection close.');
-  };
-  socket.onmessage = function(message) {
-    var data = message.data,
-        json;
-    if ($.type(data) === "string") {
-      json = JSON.parse(data);
-      if (json.message === "freq") {
-        $('#freq')[0].value = json.value;
-      } else if (json.message === "lfo") {
-        $('#lfo')[0].value = json.value;
-      } else if (json.message === "depth") {
-        $('#depth')[0].value = json.value;
-      }
-    } else {
-      listener.setAudioBuffer(data);
-    }
-  };
-
   // Event Setup
   $('#freq').bind('change', function(e){
-    socket.send(JSON.stringify({ message: "freq", value: this.valueAsNumber }));
+    ws.send(JSON.stringify({ message: "freq", value: this.valueAsNumber }));
   });
   $('#lfo').bind('change', function(e){
-    socket.send(JSON.stringify({ message: "lfo", value: this.valueAsNumber }));
+    ws.send(JSON.stringify({ message: "lfo", value: this.valueAsNumber }));
   });
   $('#depth').bind('change', function(e){
-    socket.send(JSON.stringify({ message: "depth", value: this.valueAsNumber }));
+    ws.send(JSON.stringify({ message: "depth", value: this.valueAsNumber }));
   });
   $('#volume').bind('change', function(e){
     volumeNode.gain.value = this.valueAsNumber;

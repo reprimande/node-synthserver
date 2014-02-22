@@ -12,7 +12,8 @@ var express = require('express'),
 var BUFFER_LENGTH = 2048;
 
 var CVIn = function() {
-  this.values = new Buffer(BUFFER_LENGTH * 4);
+  this.values = new Buffer(new Uint8Array(BUFFER_LENGTH * 4));
+  console.log(this.values);
   Writable.call(this);
 };
 util.inherits(CVIn, Writable);
@@ -29,6 +30,7 @@ var SinOsc = function(freq) {
   this.freq = freq;
   this.mod = 0;
   this.depth = 0;
+  this.cvin = new CVIn();
   this.samplerate = 44100;
   Readable.call(this);
 };
@@ -42,9 +44,13 @@ SinOsc.prototype._read = function(n) {
 SinOsc.prototype.process = function() {
   var self = this,
       view = new DataView(new ArrayBuffer(BUFFER_LENGTH * 4)),
-      offset = 0, i, val;
+      cvView = new DataView(new Uint8Array(this.cvin.values).buffer),
+      offset = 0, i, cvval, val;
+
   for (i = 0; i < BUFFER_LENGTH; i++) {
-    val = self.generate();
+    cvval = cvView.getFloat32(offset);
+//    console.log(cvval);
+    val = self.generate(cvval);
     view.setFloat32(offset, val);
     offset += 4;
   }
@@ -56,9 +62,9 @@ SinOsc.prototype.process = function() {
     });
   }
 };
-SinOsc.prototype.generate = function() {
-  var val = Math.sin(Math.PI * 2 * this.phase);
-  var step = (this.freq + (this.mod * this.depth)) / this.samplerate;
+SinOsc.prototype.generate = function(cvval) {
+  var val = Math.sin(Math.PI * 2 * this.phase),
+      step = (this.freq + (cvval * this.depth)) / this.samplerate;
   this.phase += step;
   return val;
 };
@@ -85,7 +91,7 @@ VCA.prototype.process = function(input) {
       offset = 0, cvval;
 
   for (var i = 0; i < BUFFER_LENGTH; i++) {
-    cvval = cvView.getFloat32(offset);
+    cvval = 1;//cvView.getFloat32(offset);
     dstView.setFloat32(offset, srcView.getFloat32(offset) * self.gain * cvval);
     offset += 4;
   }
@@ -241,19 +247,21 @@ SocketWriter.prototype.sendMessage = function(json, src) {
 };
 
 
-var sine = new SinOsc(1000),
+var vco = new SinOsc(1000),
     lfo = new SinOsc(0.5),
     vca = new VCA(1),
-    env = new Envelope(10, 20, 0.5, 100, 10),
+    env = new Envelope(200, 200, 0.2, 1000, 500),
     synth = new SynthServer(),
     writer = new SocketWriter();
 
-sine.pipe(vca).pipe(synth).pipe(writer);
+lfo.pipe(vco.cvin);
 env.pipe(vca.cvin);
+vco.pipe(vca).pipe(synth).pipe(writer);
+
 
 setInterval(function() {
   env.trigger();
-}, 1000);
+}, 3000);
 
 var server = http.createServer(app),
     socket = new WebSocketServer({server:server, path:'/socket'});
@@ -261,9 +269,9 @@ socket.on('connection', function(ws) {
   console.log('connect!!');
   writer.add(ws);
 
-  ws.send(JSON.stringify({message: "freq", value: sine.freq}));
+  ws.send(JSON.stringify({message: "freq", value: vco.freq}));
   ws.send(JSON.stringify({message: "lfo", value: lfo.freq}));
-  ws.send(JSON.stringify({message: "depth", value: sine.depth}));
+  ws.send(JSON.stringify({message: "depth", value: vco.depth}));
   ws.on('message', function(req, flags) {
     if (!flags.binary) {
       var data = JSON.parse(req),
@@ -272,13 +280,13 @@ socket.on('connection', function(ws) {
           send = {};
       if (message === 'freq') {
         var freq = data.value;
-        sine.freq = freq;
+        vco.freq = freq;
       } else if (message === 'lfo') {
         var freq = data.value;
         lfo.freq = freq;
       } else if (message === 'depth') {
         var depth = data.value;
-        sine.depth = depth;
+        vco.depth = depth;
       }
       writer.sendMessage(data, ws);
     }

@@ -11,6 +11,19 @@ var express = require('express'),
 
 var BUFFER_LENGTH = 2048;
 
+var CVIn = function() {
+  this.values = new Buffer(BUFFER_LENGTH * 4);
+  Writable.call(this);
+};
+util.inherits(CVIn, Writable);
+CVIn.prototype._write = function(chunk, encoding, cb) {
+  var self = this;
+  this.values = chunk;
+  setTimeout(function() {
+    cb();
+  }, BUFFER_LENGTH / 44100 * 1000);
+};
+
 var SinOsc = function(freq) {
   this.phase = 0;
   this.freq = freq;
@@ -50,20 +63,124 @@ SinOsc.prototype.generate = function() {
   return val;
 };
 
-var sine = new SinOsc(1000);
-var lfo = new SinOsc(0.5);
+var VCA = function(gain) {
+  this.gain = gain;
+  this.cvin = new CVIn();
+  Transform.call(this);
+};
+util.inherits(VCA, Transform);
+VCA.prototype._transform = function(chunk, encoding, cb) {
+  var self = this;
+  this.push(self.process(chunk));
+  cb(null);
+};
+VCA.prototype._flush = function(output, cb) {
+  cb(null);
+};
+VCA.prototype.process = function(input) {
+  var self = this,
+      srcView = new DataView(new Uint8Array(input).buffer),
+      dstView = new DataView(new ArrayBuffer(BUFFER_LENGTH * 4)),
+      cvView = new DataView(new Uint8Array(this.cvin.values).buffer),
+      offset = 0, cvval;
+
+  for (var i = 0; i < BUFFER_LENGTH; i++) {
+    cvval = cvView.getFloat32(offset);
+    dstView.setFloat32(offset, srcView.getFloat32(offset) * self.gain * cvval);
+    offset += 4;
+  }
+  return new Buffer(new Uint8Array(dstView.buffer));
+};
+
+
+var Envelope = function(a, d, s, st, r) {
+  this.samplerate = 44100;
+  this.attack = a;
+  this.decay = d;
+  this.sustain = s;
+  this.sustainTime = st;
+  this.st = 0;
+  this.release = r;
+  this.current = -1;
+  this.start = -1;
+  this.value = 0;
+  this.state = "none";
+  Readable.call(this);
+};
+
+util.inherits(Envelope, Readable);
+Envelope.prototype._read = function(n) {
+  var self = this;
+  setImmediate(function() {
+    self.process();
+  });
+};
+Envelope.prototype.trigger = function() {
+  console.log("trigger!!!");
+  this.state = "attack";
+};
+Envelope.prototype.process = function() {
+  var self = this,
+      curent = (new Date()).getTime(),
+      view = new DataView(new ArrayBuffer(BUFFER_LENGTH * 4)),
+      offset = 0, i, val;
+  for (i = 0; i < BUFFER_LENGTH; i++) {
+    val = self.generate();
+    view.setFloat32(offset, val);
+    offset += 4;
+  }
+
+  var buffer = new Buffer(new Uint8Array(view.buffer));
+  if (this.push(buffer)) {
+    setImmediate(function() {
+      self.process();
+    });
+  }
+};
+Envelope.prototype.generate = function() {
+  var funcs = {
+    "attack": function() {
+      this.value += 1000 / this.samplerate / this.attack;
+      if (this.value >= 1) {
+        this.state = "decay";
+      }
+    },
+    "decay": function() {
+      this.value -= 1000 / this.samplerate / this.decay * this.sustain;
+      if (this.value <= this.sustain) {
+        this.state = "sustain";
+      }
+    },
+    "sustain": function() {
+      this.value = this.sustain;
+	  if (this.st++ >= this.samplerate * 0.001 * this.sustainTime) {
+		this.st = 0;
+		this.state = "release";
+	  }
+    },
+    "release": function() {
+      this.value -= 1000 / this.samplerate / this.release;
+      if (this.value <= 0) {
+        this.value = 0;
+        this.state = "none";
+      }
+    },
+    "none": function() {
+      this.value = 0;
+    }
+  };
+  var func = funcs[this.state];
+  if (func) func.apply(this);
+  return this.value;
+};
+
 
 /*
  * SynthServer
  */
-
 var SynthServer = function() {
   var self = this;
-  //Readable.call(this);
   Transform.call(this);
-  // setImmediate(function() {
-  //   self.process();
-  // });
 };
 util.inherits(SynthServer, Transform);
 
@@ -75,12 +192,6 @@ SynthServer.prototype._transform = function(chunk, encoding, cb) {
 SynthServer.prototype._flush = function(output, cb) {
   cb(null);
 };
-// SynthServer.prototype._read = function(n) {
-//   var self = this;
-//   setImmediate(function() {
-//     self.loop();
-//   });
-// };
 SynthServer.prototype.process = function(input) {
   var self = this,
       view = new DataView(new ArrayBuffer(BUFFER_LENGTH * 4)),
@@ -96,9 +207,9 @@ SynthServer.prototype.process = function(input) {
 /*
  * SocketWriter
  */
-var SocketWriter = function(ws, opts) {
+var SocketWriter = function() {
   var self = this;
-  Writable.call(self, opts);
+  Writable.call(self);
   self.sockets = [];
 };
 util.inherits(SocketWriter, Writable);
@@ -129,33 +240,23 @@ SocketWriter.prototype.sendMessage = function(json, src) {
   });
 };
 
-var synth = new SynthServer();
 
-app.configure(function(){
-  app.set('views', __dirname + '/views');
-  app.set('view engine', 'ejs');
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(express.cookieParser());
-  app.use(app.router);
-  app.use(express.static(__dirname + '/public'));
-});
-app.configure('development', function(){
-  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
-});
-app.configure('production', function(){
-  app.use(express.errorHandler());
-});
-app.get('/', function(req, res){
-  res.render('index');
-});
+var sine = new SinOsc(1000),
+    lfo = new SinOsc(0.5),
+    vca = new VCA(1),
+    env = new Envelope(10, 20, 0.5, 100, 10),
+    synth = new SynthServer(),
+    writer = new SocketWriter();
 
-var server = http.createServer(app);
-var socket = new WebSocketServer({server:server, path:'/socket'});
+sine.pipe(vca).pipe(synth).pipe(writer);
+env.pipe(vca.cvin);
 
-var writer = new SocketWriter();
-sine.pipe(synth).pipe(writer);
+setInterval(function() {
+  env.trigger();
+}, 1000);
 
+var server = http.createServer(app),
+    socket = new WebSocketServer({server:server, path:'/socket'});
 socket.on('connection', function(ws) {
   console.log('connect!!');
   writer.add(ws);
@@ -193,7 +294,28 @@ socket.on('connection', function(ws) {
   });
 });
 
+app.configure(function(){
+  app.set('views', __dirname + '/views');
+  app.set('view engine', 'ejs');
+  app.use(express.bodyParser());
+  app.use(express.methodOverride());
+  app.use(express.cookieParser());
+  app.use(app.router);
+  app.use(express.static(__dirname + '/public'));
+});
+app.configure('development', function(){
+  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
+});
+app.configure('production', function(){
+  app.use(express.errorHandler());
+});
+app.get('/', function(req, res){
+  res.render('index');
+});
+
+
 var port = process.env.PORT || 5000;
+
 server.listen(port, function() {
   console.log("Listening on " + port);
 });

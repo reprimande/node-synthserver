@@ -2,6 +2,7 @@ var express = require('express'),
     http = require('http'),
     app = express(),
     WebSocketServer = require('ws').Server,
+    sio = require("socket.io").listen(5001),
     stream = require('stream'),
     Readable = stream.Readable,
     Writable = stream.Writable,
@@ -43,23 +44,18 @@ SynthServer.prototype.loop = function() {
   var self = this,
       bufLen = 2048,
       input = new Float32Array(bufLen),
-      arrayBuffer = new ArrayBuffer(bufLen * 2 * 4),
-      view = new DataView(arrayBuffer),
-      offset = 0;
+      buf = new Buffer(bufLen * 2 * 4),
+      offset = 0, i, j;
 
-  for (var i = 0; i < bufLen; i++) {
+  for (i = 0; i < bufLen; i++) {
     sine.mod = lfo.generate();
     var val = sine.generate();
-    input[i] = val;
+    buf.writeInt16LE((val * 32760) | 0, offset);
+    offset += 2;
   }
 
-  for (var i = 0; i < 2; i++) {
-    for (var j = 0; j < bufLen; j++) {
-      view.setFloat32(offset, input[j]);
-      offset += 4;
-    }
-  }
-  if (this.push(new Buffer(new Uint8Array(view.buffer)))) {
+  //if (this.push(new Buffer(new Uint8Array(view.buffer)))) {
+  if (this.push(buf)) {
     setImmediate(function() {
       self.loop();
     });
@@ -74,9 +70,9 @@ var SocketWriter = function(ws, opts) {
 util.inherits(SocketWriter, Writable);
 SocketWriter.prototype._write = function(chunk, encoding, cb) {
   var self = this;
-  for (var i = 0; i < this.sockets.length; i++) {
-    this.sockets[i].send(chunk, {binary: true, mask: false});
-  }
+  this.sockets.forEach(function(s) {
+    s.send(chunk, {binary: true, mask: false});
+  });
   setTimeout(function() {
     cb();
   }, 2048 / 44100 * 1000);
@@ -86,13 +82,17 @@ SocketWriter.prototype.add = function(ws) {
   console.log("SocketWriter::add", "current conections:", this.sockets.length);
 };
 SocketWriter.prototype.remove = function(ws) {
-  for (var i = 0; i < this.sockets.length; i++) {
-    if (this.sockets[i] === ws) {
-      this.sockets.splice(i, 1);
-      break;
-    }
-  }
+  this.sockets.forEach(function(s, i, l) {
+    if (s === ws) l.splice(i, 1);
+  });
   console.log("SocketWriter::remove", "current conections:", this.sockets.length);
+};
+SocketWriter.prototype.sendMessage = function(json, src) {
+  this.sockets.forEach(function(s) {
+    if (src !== s) {
+      s.send(JSON.stringify(json));
+    }
+  });
 };
 
 var synth = new SynthServer();
@@ -125,20 +125,27 @@ synth.pipe(writer);
 socket.on('connection', function(ws) {
   console.log('connect!!');
   writer.add(ws);
+
+  ws.send(JSON.stringify({message: "freq", value: sine.freq}));
+  ws.send(JSON.stringify({message: "lfo", value: lfo.freq}));
+  ws.send(JSON.stringify({message: "depth", value: sine.depth}));
   ws.on('message', function(req, flags) {
     if (!flags.binary) {
-      var data = JSON.parse(req);
-      var message = data.message;
+      var data = JSON.parse(req),
+          message = data.message,
+          value = data.value,
+          send = {};
       if (message === 'freq') {
         var freq = data.value;
         sine.freq = freq;
       } else if (message === 'lfo') {
         var freq = data.value;
         lfo.freq = freq;
-      }else if (message === 'depth') {
+      } else if (message === 'depth') {
         var depth = data.value;
         sine.depth = depth;
       }
+      writer.sendMessage(data, ws);
     }
   });
 

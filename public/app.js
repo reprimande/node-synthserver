@@ -43,7 +43,12 @@
       } else if (json.message === "bpm") {
         $('#bpm')[0].value = json.value;
       } else if (json.message === "seq") {
-        $("*[name=gate]")[json.gate.index].checked = json.gate.value;
+        if (json.gate) {
+          $("*[name=gate]")[json.gate.index].checked = json.gate.value;
+        }
+        if (json.note) {
+          $(".step-bar")[json.note.index].value = json.note.value;
+        }
       } else if (json.message === "step") {
         // $("#seq span").each(function(i, s) {
         //   s.className = "step";
@@ -72,6 +77,10 @@
         $("*[name=gate]").each(function(i, c) {
           c.checked = json.data.gate[i];
         });
+        $(".step-bar").each(function(i, c) {
+          c.value = json.data.note[i];
+        });
+
       }
     } else {
       listener.setAudioBuffer(data);
@@ -212,6 +221,9 @@
   visualizer.connect(ctx.destination);
   visualizer.start();
 
+  var midi2freq = function(note) {
+    return 440.0 * Math.pow(2.0, (note - 69.0) / 12.0);
+  };
   // Event Setup
   $('#freq').bind('change', function(e){
     ws.send(JSON.stringify({ message: "freq", value: this.valueAsNumber }));
@@ -240,9 +252,21 @@
   });
 
   $("*[name=gate]").bind('change', function(e) {
-    console.log(this.checked, this.value);
     ws.send(JSON.stringify({ message: "seq", gate: {index: this.value, value: this.checked}}));
   });
+
+  $(".step-bar").bind('change', function(e) {
+    var target = this, index;
+    $(".step-bar").each(function(i, b) {
+      if (target === b) {
+        index = i;
+      }
+    });
+    var note = this.valueAsNumber;
+    ws.send(JSON.stringify({ message: "seq", note: {index: index, value: note}}));
+  });
+
+
   $("#seqonoff").bind('change', function(e) {
     ws.send(JSON.stringify({ message: "seqonoff", value: this.checked}));
   });
@@ -265,7 +289,7 @@
   $(window).keydown(function(e) {
     var midinote = key2midi[e.keyCode];
     if (midinote === (void 0)) return;
-    var freq = 440.0 * Math.pow(2.0, (midinote + (octave * 12) - 69.0) / 12.0);
+    var freq = midi2freq(midinote + (octave * 12));
     console.log(freq);
     ws.send(JSON.stringify({ message: "trigger", value: freq }));
     $('#freq')[0].value = freq;

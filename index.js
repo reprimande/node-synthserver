@@ -272,7 +272,7 @@ var Sequencer = function(cb) {
   var self = this;
   this.maxStep = 16;
   this.gate = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-  this.freq = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  this.note = [48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48];
   this.step = 0;
   this.bpm = 120;
   this.prevTime = (new Date).getTime();
@@ -307,9 +307,13 @@ Sequencer.prototype.process = function() {
 
   if (this.prevTime + ms < current) {
     this.step = (this.step < this.maxStep - 1) ? this.step + 1 : 0;
-    if (this.callback) this.callback.apply(this, [this.step, this.gate[this.step], this.freq[this.step]]);
+    if (this.callback) this.callback.apply(this, [this.step, this.gate[this.step], this.note[this.step]]);
     this.prevTime = current;
   }
+};
+
+var midi2freq = function(note) {
+  return 440.0 * Math.pow(2.0, (note - 69.0) / 12.0);
 };
 
 var vco = new SinOsc(1000),
@@ -317,9 +321,12 @@ var vco = new SinOsc(1000),
     vca = new VCA(1),
     env = new Envelope(10, 10, 0.9, 100, 50),
     synth = new SynthServer(),
-    seq = new Sequencer(function(step, gate, freq) {
+    seq = new Sequencer(function(step, gate, note) {
       if (gate === 1) {
+        var freq = midi2freq(note);
         env.trigger();
+        vco.freq = freq;
+        writer.sendMessage({message: "freq", value: freq});
       }
       writer.sendMessage({message: "step", value: step});
     }),
@@ -353,7 +360,8 @@ socket.on('connection', function(ws) {
       "release": env.release,
       "seqonoff": seq.running,
       "bpm": seq.bpm,
-      "gate": seq.gate
+      "gate": seq.gate,
+      "note": seq.note
     }}
   ));
   ws.on('message', function(req, flags) {
@@ -385,8 +393,14 @@ socket.on('connection', function(ws) {
         vco.freq = data.value;
         env.trigger();
       } else if (message === 'seq') {
-        seq.gate[data.gate.index] = data.gate.value ? 1 : 0;
-        console.log(seq.gate);
+        if (data.gate) {
+          seq.gate[data.gate.index] = data.gate.value ? 1 : 0;
+          console.log(seq.gate);
+        }
+        if (data.note) {
+          seq.note[data.note.index] = data.note.value;
+          console.log(seq.note);
+        }
       } else if (message === 'seqonoff') {
         if (data.value) {
           seq.start();

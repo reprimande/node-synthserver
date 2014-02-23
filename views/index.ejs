@@ -39,16 +39,21 @@
         box-shadow:3px 3px 0 rgba(255, 0, 0, 0.7);
       }
       div.seq {
-        width: 400px;
+        width: 450px;
       }
-      div.seq span.step {
-        width: 40px;
-        height: 40px;
+      div.seq td.step {
+        width: 20px;
+        height: 20px;
       }
-      div.seq span.step-current {
-        width: 40px;
-        height: 40px;
+      div.seq td.step-current {
+        width: 20px;
+        height: 20px;
         background-color: yellow;
+      }
+      input.step-bar {
+        width: 20px;
+        height: 50px;
+        -webkit-appearance: slider-vertical;
       }
     </style>
     <div id="visualizer">
@@ -58,68 +63,122 @@
     <div id="container">
       <div class="controler">
         freq : <input type="range" id="freq" value="1000" max="2000" min="0" step="1"><br/>
-        lfo / speed : <input type="range" id="lfo" value="0.5" max="200" min="0" step="1"><br/>
+        lfo / speed : <input type="range" id="lfo" value="0.5" max="200" min="0.1" step="0.1"><br/>
         lfo / depth : <input type="range" id="depth" value="0" max="2000" min="0" step="1"><br/>
 
-        env / attack : <input type="range" id="attack" value="0" max="100" min="1" step="1"><br/>
-        env / decay : <input type="range" id="decay" value="0" max="100" min="1" step="1"><br/>
-        env / sustain : <input type="range" id="sustain" value="0" max="1" min="0" step="0.1"><br/>
-        env / time : <input type="range" id="sustainTime" value="0" max="1000" min="1" step="1"><br/>
-        env / release : <input type="range" id="release" value="0" max="100" min="1" step="1"><br/>
+        env / attack : <input type="range" id="attack" value="1" max="100" min="1" step="1"><br/>
+        env / decay : <input type="range" id="decay" value="1" max="100" min="1" step="1"><br/>
+        env / sustain : <input type="range" id="sustain" value="0.1" max="1" min="0.1" step="0.1"><br/>
+        env / time : <input type="range" id="sustainTime" value="1" max="1000" min="1" step="1"><br/>
+        env / release : <input type="range" id="release" value="1" max="100" min="1" step="1"><br/>
 
       </div>
       <div id="seq" class="controler seq">
         seq <input type="checkbox" id="seqonoff" name="seqonoff" value="0">
         <input type="range" id="bpm" value="120" max="200" min="0" step="1">
         <br/>
-        <span id="step-1" class="step">
-          <input type="checkbox" name="gate" value="0">
-        </span>
-        <span id="step-2" class="step">
-          <input type="checkbox" name="gate" value="1">
-        </span>
-        <span id="step-3" class="step">
-          <input type="checkbox" name="gate" value="2">
-        </span>
-        <span id="step-4" class="step">
-          <input type="checkbox" name="gate" value="3">
-        </span>
-        <span id="step-5" class="step">
-          <input type="checkbox" name="gate" value="4">
-        </span>
-        <span id="step-6" class="step">
-          <input type="checkbox" name="gate" value="5">
-        </span>
-        <span id="step-7" class="step">
-          <input type="checkbox" name="gate" value="6">
-        </span>
-        <span id="step-8" class="step">
-          <input type="checkbox" name="gate" value="7">
-        </span>
-        <span id="step-9" class="step">
-          <input type="checkbox" name="gate" value="8">
-        </span>
-        <span id="step-10" class="step">
-          <input type="checkbox" name="gate" value="9">
-        </span>
-        <span id="step-11" class="step">
-          <input type="checkbox" name="gate" value="10">
-        </span>
-        <span id="step-12" class="step">
-          <input type="checkbox" name="gate" value="11">
-        </span>
-        <span id="step-13" class="step">
-          <input type="checkbox" name="gate" value="12">
-        </span>
-        <span id="step-14" class="step">
-          <input type="checkbox" name="gate" value="13">
-        </span>
-        <span id="step-15" class="step">
-          <input type="checkbox" name="gate" value="14">
-        </span>
-        <span id="step-16" class="step">
-          <input type="checkbox" name="gate" value="15">
-        </span>
+        <table>
+          <tr>
+            <td id="step-1" class="step">
+              <input type="checkbox" name="gate" value="0">
+            </td>
+            <td id="step-2" class="step">
+              <input type="checkbox" name="gate" value="1">
+            </td>
+            <td id="step-3" class="step">
+              <input type="checkbox" name="gate" value="2">
+            </td>
+            <td id="step-4" class="step">
+              <input type="checkbox" name="gate" value="3">
+            </td>
+            <td id="step-5" class="step">
+              <input type="checkbox" name="gate" value="4">
+            </td>
+            <td id="step-6" class="step">
+              <input type="checkbox" name="gate" value="5">
+            </td>
+            <td id="step-7" class="step">
+              <input type="checkbox" name="gate" value="6">
+            </td>
+            <td id="step-8" class="step">
+              <input type="checkbox" name="gate" value="7">
+            </td>
+            <td id="step-9" class="step">
+              <input type="checkbox" name="gate" value="8">
+            </td>
+            <td id="step-10" class="step">
+              <input type="checkbox" name="gate" value="9">
+            </td>
+            <td id="step-11" class="step">
+              <input type="checkbox" name="gate" value="10">
+            </td>
+            <td id="step-12" class="step">
+              <input type="checkbox" name="gate" value="11">
+            </td>
+            <td id="step-13" class="step">
+              <input type="checkbox" name="gate" value="12">
+            </td>
+            <td id="step-14" class="step">
+              <input type="checkbox" name="gate" value="13">
+            </td>
+            <td id="step-15" class="step">
+              <input type="checkbox" name="gate" value="14">
+            </td>
+            <td id="step-16" class="step">
+              <input type="checkbox" name="gate" value="15">
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+            <td>
+              <input type="range" class="step-bar" value="36" max="127" min="36" step="1">
+            </td>
+          </tr>
+        </table>
       </div>
       <div class="controler">
         volume(browser only) : <input type="range" id="volume" value="1" max="1" min="0" step="0.01"><br/>

@@ -9,8 +9,7 @@
   "dependencies": {
     "ws": "latest",
     "express": "latest",
-    "ejs": "latest",
-    "socket.io": "latest"
+    "ejs": "latest"
   },
   "engines": {
     "node": "0.10.x",

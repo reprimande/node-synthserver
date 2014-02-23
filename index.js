@@ -141,6 +141,7 @@ Envelope.prototype._read = function(n) {
 Envelope.prototype.trigger = function() {
   this.state = "attack";
   this.value = 0;
+  this.st = 0;
 };
 Envelope.prototype.process = function() {
   var self = this,
@@ -239,14 +240,22 @@ var SocketWriter = function() {
 util.inherits(SocketWriter, Writable);
 SocketWriter.prototype._write = function(chunk, encoding, cb) {
   var self = this;
-  this.chunks.push(chunk);
+  //this.chunks.push(chunk);
+  self.sockets.forEach(function(s) {
+      setImmediate(function() {
+        if (s.readyState === 1) {
+          s.send(chunk, {binary: true, mask: false});
+        }
+      });
+  });
+
   setTimeout(function() {
-    var c = self.chunks.shift();
-    self.sockets.forEach(function(s) {
-      if (s.readyState === 1) {
-        s.send(c, {binary: true, mask: false});
-      }
-    });
+    // var c = self.chunks.shift();
+    // self.sockets.forEach(function(s) {
+    //   if (s.readyState === 1) {
+    //     s.send(c, {binary: true, mask: false});
+    //   }
+    // });
     cb();
   }, BUFFER_LENGTH / SAMPLE_RATE * 1000);
 };
@@ -326,9 +335,8 @@ var vco = new SinOsc(1000),
         var freq = midi2freq(note);
         env.trigger();
         vco.freq = freq;
-        writer.sendMessage({message: "freq", value: freq});
       }
-      writer.sendMessage({message: "step", value: step});
+      //writer.sendMessage({message: "step", value: step});
     }),
     writer = new SocketWriter();
 
@@ -343,10 +351,6 @@ var server = http.createServer(app),
 socket.on('connection', function(ws) {
   console.log('connect!!');
   writer.add(ws);
-
-  // ws.send(JSON.stringify({message: "freq", value: vco.freq}));
-  // ws.send(JSON.stringify({message: "lfo", value: lfo.freq}));
-  // ws.send(JSON.stringify({message: "depth", value: vco.depth}));
 
   ws.send(JSON.stringify(
     {message: "init", data: {

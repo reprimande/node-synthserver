@@ -88,7 +88,8 @@
   };
 
   var BUFFER_LENGTH = 256,
-      ctx = new webkitAudioContext();
+      AudioContext = window.AudioContext || window.webkitAudioContext,
+      ctx = new AudioContext();
   ctx.sampleRate = 44100;
 
   var AudioListener = function(ctx, bufferLength) {
@@ -98,7 +99,10 @@
     this.chNum = 2;
     this.listenBuffers = [];
 
+
+
     this.processNode = ctx.createJavaScriptNode(this.bufferLength, 2, 2);
+    //this.processNode = ctx.createScriptProcessor(this.bufferLength, 2, 2);
     this.processNode.onaudioprocess = function(e) {
       if (self.listenBuffers.length > 0) {
         var currentBuffer = self.listenBuffers.shift();
@@ -108,6 +112,10 @@
         e.outputBuffer.getChannelData(1).set(bufferR);
       }
     };
+
+    var bufSrc = ctx.createBufferSource();
+    bufSrc.noteOn(0);
+    bufSrc.connect(this.processNode);
   };
   AudioListener.prototype = {
     setAudioBuffer: function(buffer) {
